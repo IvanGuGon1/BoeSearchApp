@@ -1,6 +1,5 @@
-
-
 import re
+import shutil
 import PyPDF2
 import tabula
 import sys
@@ -28,19 +27,28 @@ def get_date():
 
 def get_pdf_url_files(year,month,day):
     
+    import requests
+    import re 
+    
     boe_url_string = f"https://www.boe.es/boe/dias/{year}/{month}/{day}/"
     page  = requests.get(boe_url_string)
-
-    text = page.text 
-    pdf_url_files_list = []
-    for line in text.splitlines():
-        if f"/boe/dias/{year}/{month}/{day}/pdfs" in line:
-            patron = re.compile(r"BOE-[A-Z]-\d{4}-\d{5}.pdf")
-            if len(patron.findall(line)) > 0:
-                file_str_extract = patron.findall(line)[0]
-                url = f"https://www.boe.es/boe/dias/{year}/{month}/{day}/pdfs/{file_str_extract}"
-                #print(url)
-                pdf_url_files_list.append(url)
+    
+    if page.status_code == 200:
+        text = page.text 
+        pdf_url_files_list = []
+        for line in text.splitlines():
+            if f"/boe/dias/{year}/{month}/{day}/pdfs" in line:
+                patron = re.compile(r"BOE-[A-Z]-\d{4}-\d{5}.pdf")
+                if len(patron.findall(line)) > 0:
+                    file_str_extract = patron.findall(line)[0]
+                    url = f"https://www.boe.es/boe/dias/{year}/{month}/{day}/pdfs/{file_str_extract}"
+                    #print(url)
+                    pdf_url_files_list.append(url)
+        print(f"La url boe_url_string {boe_url_string} da ha sido encontrada: {page.status_code}")
+    else:
+        print(f"La url boe_url_string {boe_url_string} da error {page.status_code}")
+        return None
+                
     return pdf_url_files_list
 
 def get_webpage_text(boe_url_string):
@@ -66,7 +74,9 @@ def download_pdf_files(url,path):
 
 
 def add_today_files_path():
-
+    import datetime
+    import os 
+    import shutil
     # Obtener la fecha actual y la fecha de ayer
     fecha_actual = datetime.date.today()
     fecha_ayer = fecha_actual - datetime.timedelta(days=1)
@@ -74,25 +84,28 @@ def add_today_files_path():
     # Formatear las fechas como cadenas (por ejemplo, "2023-09-26")
     fecha_actual_formateada = fecha_actual.strftime("%Y-%m-%d")
     fecha_ayer_formateada = fecha_ayer.strftime("%Y-%m-%d")
-
+    full_path_today = os.path.abspath(os.path.join("files",fecha_actual_formateada))
+    full_path_yesterday = os.path.abspath(os.path.join("files",fecha_ayer_formateada))
     # Crear el directorio con la fecha de hoy (si no existe)
-    if not os.path.exists(fecha_actual_formateada):
-        os.mkdir(fecha_actual_formateada)
-        print(f"Directorio '{fecha_actual_formateada}' creado con éxito.")
-
-    # Borrar el directorio con la fecha de ayer (si existe)
-    if os.path.exists(fecha_ayer_formateada):
+    if not os.path.exists(full_path_today):
         try:
-            os.rmdir(fecha_ayer_formateada)
-            print(f"Directorio '{fecha_ayer_formateada}' eliminado con éxito.")
-        except OSError as e:
-            print(f"No se pudo eliminar el directorio '{fecha_ayer_formateada}': {str(e)}")
-
+            os.mkdir(full_path_today)
+            print(f"Directorio '{full_path_today}' creado con éxito.")
+        except Exception as e:
+            print(f"No se pudo crear el directorio '{full_path_today}': {e}")
+    # Borrar el directorio con la fecha de ayer (si existe)
+    if os.path.exists(full_path_yesterday):
+      
+        try:
+            shutil.rmtree(full_path_yesterday)
+            print(f"Directorio '{full_path_yesterday}' eliminado con éxito.")
+        except Exception as e:
+            print(f"Problema al eliminar directorio {full_path_yesterday} , excepcion {e}")
+            
     # Obtener la dirección absoluta del directorio creado
-    directorio_absoluto = os.path.abspath(fecha_actual_formateada)
-    
+    #directorio_absoluto = os.path.abspath(fecha_actual_formateada)
     # Retornar la dirección absoluta
-    return directorio_absoluto
+    return full_path_today
 
 
 def read_local_pdf_files(path):
@@ -249,15 +262,19 @@ def search_strings_in_pdf(file_path,surname_1,surname_2,name):
 
 if __name__ == "__main__":
         # Verifica si se proporcionaron los tres argumentos esperados
+    """
     if len(sys.argv) != 4:
         print("Uso: python script.py <Apellido1> <Apellido2> <Nombre>")
         sys.exit(1)
-
+    
     # Lee los argumentos de la línea de comandos
     surname_1 = transform_unidecode_string(sys.argv[1])
     surname_2 = transform_unidecode_string(sys.argv[2])
     name = transform_unidecode_string(sys.argv[3])
-
+    """
+    surname_1 = "MARTIN"
+    surname_2 = "GUERRERO"
+    name = "IVAN"
     """
     Prueba de funcion get_date
     """
@@ -280,10 +297,18 @@ if __name__ == "__main__":
 
     today_files_path = add_today_files_path()
     print(today_files_path)
+    
     """
+    Prueba de funcion check_files
+    """
+
     for pdf_url_file in pdf_url_files_list:
-        download_pdf_files(pdf_url_file,path)
-    """
+        # write a code to check if file exists in directory today_files_path
+        if pdf_url_file.split("/")[-1] not in os.listdir(today_files_path):
+            download_pdf_files(pdf_url_file,today_files_path)
+        else:
+            print(f"El archivo {pdf_url_file.split('/')[-1]} ya existe")
+
     
     """
     Prueba de funcion read_local_pdf_files
@@ -291,9 +316,6 @@ if __name__ == "__main__":
     
     print("\n\n   Prueba de funcion read_pdf_files \n\n")
     print("\n\n\n*10")
-    
-
-
     
     file_list = read_local_pdf_files(today_files_path)
     for file in file_list:
