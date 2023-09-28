@@ -7,7 +7,7 @@ import os
 import datetime
 import requests
 from unidecode import unidecode
-
+from typing import Tuple
 
 #matchings = re.findall(r"**\d{2}/\d{2}/\d{4}.*df", text)
 
@@ -15,21 +15,23 @@ from unidecode import unidecode
 
 
 
-def get_date():
+def get_date() -> Tuple[str, str, str]:
+    """
+    Get the current date and return it as a tuple of strings.
 
+    Returns:
+        Tuple[str, str, str]: A tuple containing the day, month, and year as strings.
+    """
     fecha_actual = datetime.datetime.now()
     fecha_formateada = fecha_actual.strftime("%d/%m/%Y")
     day = fecha_formateada.split("/")[0]
     month = fecha_formateada.split("/")[1]
     year = fecha_formateada.split("/")[2]
-    return day,month,year
+    return day, month, year
     
 
 def get_pdf_url_files(year,month,day):
-    
-    import requests
-    import re 
-    
+
     boe_url_string = f"https://www.boe.es/boe/dias/{year}/{month}/{day}/"
     page  = requests.get(boe_url_string)
     
@@ -256,13 +258,15 @@ def search_strings_in_pdf(file_path,surname_1,surname_2,name):
                 
                 if surname_1_char_position != -1 and surname_2_char_position != -1 and name_char_position != -1:
                     if surname_1_char_position < surname_2_char_position < name_char_position:
-                        print(f"Encontrados los apellidos y nombres {surname_1} {surname_2} {name}")
+                        #print(f"Encontrados los apellidos y nombres {surname_1} {surname_2} {name}")
                         finded = True
     return finded 
 
 if __name__ == "__main__":
         # Verifica si se proporcionaron los tres argumentos esperados
     """
+    Scripg logico de prueba
+    
     if len(sys.argv) != 4:
         print("Uso: python script.py <Apellido1> <Apellido2> <Nombre>")
         sys.exit(1)
@@ -299,7 +303,7 @@ if __name__ == "__main__":
     print(today_files_path)
     
     """
-    Prueba de funcion check_files
+    Descargar solo los ficheros que no tenemos descargados. 
     """
 
     for pdf_url_file in pdf_url_files_list:
